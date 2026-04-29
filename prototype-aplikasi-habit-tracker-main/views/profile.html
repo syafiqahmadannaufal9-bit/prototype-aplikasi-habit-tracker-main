@@ -32,14 +32,15 @@
     <section class="px-6 mt-4 animate-slide-up delay-100">
         <div class="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex flex-col items-center">
             
-            <div class="relative mb-4 group transition-transform hover:scale-105 active:scale-95 cursor-pointer">
+            <div class="relative mb-4 group transition-transform hover:scale-105 active:scale-95 cursor-pointer" onclick="document.getElementById('avatar-upload').click()">
                 <div class="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-lg">
                     <img id="profile-img" src="https://i.pravatar.cc/150?img=11" alt="Profile Name" class="w-full h-full object-cover">
                 </div>
-                <div class="absolute bottom-0 right-0 bg-[var(--primary)] text-white w-8 h-8 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+                <div class="absolute bottom-0 right-0 bg-[var(--primary)] theme-bg-update text-white w-8 h-8 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
                     <i class="fa-solid fa-camera text-xs"></i>
                 </div>
             </div>
+            <input type="file" id="avatar-upload" class="hidden" accept="image/*" onchange="handleAvatarUpload(event)">
             
             <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2 mt-2">
                 <span id="display-username">Loading...</span>
@@ -189,8 +190,23 @@
             handleSignOut();
         }
 
+        function handleAvatarUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const dataUrl = e.target.result;
+                    document.getElementById('profile-img').src = dataUrl;
+                    localStorage.setItem('customAvatar', dataUrl);
+                    showToast('Profile photo updated successfully!');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', async () => {
             // Fetch User Details to display
+            const savedAvatar = localStorage.getItem('customAvatar');
             if (supabaseClient) {
                 const { data: { user } } = await supabaseClient.auth.getUser();
                 if (user) {
@@ -199,7 +215,11 @@
                     const email = user.email;
                     document.getElementById('display-username').innerText = name;
                     document.getElementById('display-email').innerText = email;
-                    document.getElementById('profile-img').src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff`;
+                    
+                    const profileImg = document.getElementById('profile-img');
+                    if (profileImg) {
+                        profileImg.src = savedAvatar ? savedAvatar : `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff`;
+                    }
 
                     // Show correct auth provider badge
                     const provider = user.app_metadata?.provider || 'email';
@@ -212,6 +232,9 @@
                         }
                     }
                 }
+            } else if (savedAvatar) {
+                const profileImg = document.getElementById('profile-img');
+                if (profileImg) profileImg.src = savedAvatar;
             }
         });
     </script>
