@@ -56,7 +56,5 @@ PEMBANGUNAN APLIKASI HABIT TRACKER
     - NIM: [NIM Anda]
     - Jurusan: [Jurusan Anda]
 6. CATATAN
-    - Proyek ini masih dalam tahap pengembangan.
-    - Fitur-fitur akan terus ditambahkan di masa mendatang.
-    - Jika ada bug atau saran, silakan laporkan ke pengembang.
+   
 
