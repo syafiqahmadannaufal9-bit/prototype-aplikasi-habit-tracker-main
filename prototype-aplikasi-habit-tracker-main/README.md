@@ -1,4 +1,4 @@
--- PEMBANGUNAN APLIKASI HABIT TRACKER --
+PEMBANGUNAN APLIKASI HABIT TRACKER 
 
 1. TUJUAN PROYEK
     - Membangun aplikasi habit tracker berbasis web yang dapat digunakan untuk melacak kebiasaan pengguna, yang bertujuan membangun kebiasaan kecil yang kecil namun konsisten dan continue.
