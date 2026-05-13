@@ -52,10 +52,10 @@
     - NIM: [A320250001]
     - Jurusan: [Rekayasa Perangkat Lunak]
     
-    - Nama: [Nama Anda]
-    - NIM: [NIM Anda]
-    - Jurusan: [Jurusan Anda]
-    
+    - Nama: [Azahra Zahra Zahira]
+    - NIM: [A320250024]
+    - Jurusan: [Rekayasa Perangkat Lunak]
+
 6. CATATAN
     - Proyek ini masih dalam tahap pengembangan.
     - Fitur-fitur akan terus ditambahkan di masa mendatang.
