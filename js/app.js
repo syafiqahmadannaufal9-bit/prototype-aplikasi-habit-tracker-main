@@ -287,14 +287,17 @@ if (document.readyState === 'loading') {
 
 async function setupAuthListener() {
     const { data: { session }, error } = await supabaseClient.auth.getSession();
+    if (error) {
+        console.error('getSession error:', error);
+    }
+    console.log('Initial session:', session ? 'Active' : 'None');
     handleRouteProtection(session);
 
     supabaseClient.auth.onAuthStateChange((event, session) => {
-        if (event === 'SIGNED_IN') {
-            console.log('User signed in');
+        console.log('Auth state change:', event, session ? 'has session' : 'no session');
+        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
             handleRouteProtection(session);
         } else if (event === 'SIGNED_OUT') {
-            console.log('User signed out');
             handleRouteProtection(null);
         }
     });
@@ -320,16 +323,40 @@ async function handleEmailLogin(event) {
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading...';
     btn.disabled = true;
 
-    const email = document.getElementById('email').value;
+    const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
 
-    const { data, error } = await supabaseClient.auth.signInWithPassword({
-        email: email,
-        password: password,
-    });
+    try {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+            email: email,
+            password: password,
+        });
 
-    if (error) {
-        showToast("Login failed: " + error.message, 'error');
+        if (error) {
+            console.error('Login error:', error);
+            // Provide user-friendly error messages
+            let msg = error.message;
+            if (msg.toLowerCase().includes('email not confirmed')) {
+                msg = 'Your email is not confirmed yet. Please check your inbox for a confirmation link, or register again.';
+            } else if (msg.toLowerCase().includes('invalid login credentials')) {
+                msg = 'Invalid email or password. Please check your credentials and try again.';
+            }
+            showToast(msg, 'error');
+            btn.innerText = originalText;
+            btn.disabled = false;
+            return;
+        }
+
+        // Successful login — redirect to index
+        if (data && data.session) {
+            showToast('Login successful! Redirecting...');
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 500);
+        }
+    } catch (err) {
+        console.error('Login exception:', err);
+        showToast('An unexpected error occurred. Please try again.', 'error');
         btn.innerText = originalText;
         btn.disabled = false;
     }
@@ -342,38 +369,45 @@ async function handleEmailRegister(event) {
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading...';
     btn.disabled = true;
 
-    const username = document.getElementById('username').value;
-    const name = document.getElementById('name').value;
-    const email = document.getElementById('email').value;
+    const username = document.getElementById('username').value.trim();
+    const name = document.getElementById('name').value.trim();
+    const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
 
-    const { data, error } = await supabaseClient.auth.signUp({
-        email: email,
-        password: password,
-        options: {
-            data: {
-                full_name: name,
-                username: username
+    try {
+        const { data, error } = await supabaseClient.auth.signUp({
+            email: email,
+            password: password,
+            options: {
+                data: {
+                    full_name: name,
+                    username: username
+                }
             }
-        }
-    });
+        });
 
-    if (error) {
-        showToast("Registration failed: " + error.message, 'error');
-        btn.innerText = originalText;
-        btn.disabled = false;
-    } else if (data.user && !data.session) {
-        // Supabase returns user but no session when email already exists (repeated signup)
-        // or when email confirmation is pending
-        showToast("This email is already registered. Please log in instead, or use 'Forgot Password'.", 'error');
-        btn.innerText = originalText;
-        btn.disabled = false;
-        setTimeout(() => window.location.href = 'login.html', 2000);
-    } else {
-        // Successful registration — user is auto-confirmed
+        if (error) {
+            console.error('Registration error:', error);
+            showToast("Registration failed: " + error.message, 'error');
+            btn.innerText = originalText;
+            btn.disabled = false;
+            return;
+        }
+
+        // Detect duplicate email: Supabase returns a user with empty identities
+        // when the email is already registered (and autoconfirm is off)
+        if (data.user && data.user.identities && data.user.identities.length === 0) {
+            showToast("This email is already registered. Please log in instead.", 'error');
+            btn.innerText = originalText;
+            btn.disabled = false;
+            setTimeout(() => window.location.href = 'login.html', 2000);
+            return;
+        }
+
+        // Save profile data to the 'profiles' table
         if (data.user) {
             try {
-                await supabaseClient
+                const { error: profileError } = await supabaseClient
                     .from('profiles')
                     .upsert({
                         id: data.user.id,
@@ -381,14 +415,33 @@ async function handleEmailRegister(event) {
                         username: username,
                         email: email
                     }, { onConflict: 'id' });
+
+                if (profileError) {
+                    console.error('Profile save error:', profileError);
+                }
             } catch (profileErr) {
-                console.error('Profile save error:', profileErr);
+                console.error('Profile save exception:', profileErr);
             }
         }
-        showToast('Account created successfully! You can now log in.');
+
+        if (data.session) {
+            // Autoconfirm is ON — user is logged in immediately
+            showToast('Account created successfully! Redirecting...');
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 500);
+        } else {
+            // Autoconfirm is OFF — email confirmation required
+            showToast('Account created! Please check your email to confirm your account, then log in.');
+            btn.innerText = originalText;
+            btn.disabled = false;
+            setTimeout(() => window.location.href = 'login.html', 3000);
+        }
+    } catch (err) {
+        console.error('Registration exception:', err);
+        showToast('An unexpected error occurred. Please try again.', 'error');
         btn.innerText = originalText;
         btn.disabled = false;
-        window.location.href = 'login.html';
     }
 }
 
